@@ -80,6 +80,11 @@ export interface CardElementProps extends ElementProps {
    * For more information, refer to the [Stripe.js reference](https://stripe.com/docs/js/element/events/on_networkschange?type=cardElement).
    */
   onNetworksChange?: (event: {elementType: 'card'}) => any;
+
+  /**
+   * Triggered when the Element fails to load.
+   */
+  onLoadError?: (event: {elementType: 'card'; error: StripeError}) => any;
 }
 
 export type CardElementComponent = FunctionComponent<CardElementProps>;
@@ -112,6 +117,11 @@ export interface CardNumberElementProps extends ElementProps {
    * For more information, refer to the [Stripe.js reference](https://stripe.com/docs/js/element/events/on_networkschange?type=cardNumberElement).
    */
   onNetworksChange?: (event: {elementType: 'cardNumber'}) => any;
+
+  /**
+   * Triggered when the Element fails to load.
+   */
+  onLoadError?: (event: {elementType: 'cardNumber'; error: StripeError}) => any;
 }
 
 export type CardNumberElementComponent = FunctionComponent<
@@ -541,6 +551,44 @@ export interface ShippingAddressElementProps extends ElementProps {
 export type ShippingAddressElementComponent = FunctionComponent<
   ShippingAddressElementProps
 >;
+
+export interface CartElementProps extends ElementProps {
+  /**
+   * An object containing [Element configuration options](https://stripe.com/docs/js/elements_object/create_cart_element#cart_element_create-options).
+   */
+  options?: stripeJs.StripeCartElementOptions;
+
+  /**
+   * Triggered when data exposed by this Element is changed (e.g., when there is an error).
+   * For more information, refer to the [Stripe.js reference](https://stripe.com/docs/js/element/events/on_change?type=cartElement).
+   */
+  onChange?: (event: stripeJs.StripeCartElementPayloadEvent) => any;
+
+  /**
+   * Triggered when the Element is fully rendered and can accept imperative `element.focus()` calls.
+   * Called with a reference to the underlying [Element instance](https://stripe.com/docs/js/element).
+   */
+  onReady?: (event: stripeJs.StripeCartElementPayloadEvent) => any;
+
+  /**
+   * Triggered when the Element fails to load.
+   */
+  onLoadError?: (event: {elementType: 'cart'; error: StripeError}) => any;
+
+  /**
+   * Triggered when the "Checkout" button is clicked within the Element.
+   */
+  onCheckout?: (event: stripeJs.StripeCartElementPayloadEvent) => any;
+
+  /**
+   * Triggered when a line item's link is clicked within the Element.
+   */
+  onLineItemClick?: (
+    event: stripeJs.StripeCartElementLineItemClickEvent
+  ) => any;
+}
+
+export type CartElementComponent = FunctionComponent<CartElementProps>;
 
 export interface PaymentMethodMessagingElementProps {
   /**

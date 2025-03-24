@@ -118,31 +118,7 @@ esac
 # validate preid if passed
 ALLOWED_PRERELEASE_TYPES=(prepatch preminor premajor prerelease)
 if [ -n "$PREID" ]; then
-  if [ "$PREID" != "alpha" ] && [ "$PREID" != "beta" ]; then
-    echo "Invalid pre_id. It should be either 'alpha' or 'beta'"
-    echo ""
-    echo_help
-    exit 1
-  fi
 
-  if [ -n "$RELEASE_TYPE" ]; then
-    valid=false
-
-    for type in "${ALLOWED_PRERELEASE_TYPES[@]}"; do
-      if [ "$type" = "$RELEASE_TYPE" ]; then
-        valid=true
-        break
-      fi
-    done
-
-    if [ "$valid" = false ]; then
-      ALLOWED_PRERELEASE_TYPES_STRING=$(printf "'%s', " "${ALLOWED_PRERELEASE_TYPES[@]}")
-      echo "Invalid release_type. It should be one of: $ALLOWED_PRERELEASE_TYPES_STRING when pre_id is set"
-      echo ""
-      echo_help
-      exit 1
-    fi
-  fi
 fi
 
 check_github_token
@@ -173,6 +149,9 @@ fi
 echo "Installing dependencies according to lockfile"
 yarn -s install --frozen-lockfile
 
+echo "Building"
+yarn -s run build
+
 echo "Running tests"
 yarn -s run test
 
@@ -190,9 +169,6 @@ verify_commit_is_signed
 
 echo "Pushing git commit and tag"
 git push --follow-tags
-
-echo "Building"
-yarn -s run build
 
 echo "Publishing release"
 yarn --ignore-scripts publish --non-interactive --access=public
