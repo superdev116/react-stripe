@@ -32,7 +32,6 @@ const App = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setStripePromise(loadStripe(pk));
   };
 
   const handleUnload = () => {

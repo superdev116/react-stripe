@@ -1,200 +1,74 @@
-// Must use `import *` or named imports for React's types
-import {FunctionComponent} from 'react';
-import * as stripeJs from '@stripe/stripe-js';
+// This example shows you how to set up React Stripe.js and use
+// Embedded Checkout.
+// Learn how to accept a payment using the official Stripe docs.
+// https://stripe.com/docs/payments/accept-a-payment#web
 
 import React from 'react';
+import {loadStripe} from '@stripe/stripe-js';
+import {EmbeddedCheckoutProvider, EmbeddedCheckout} from '../../src';
 
-import PropTypes from 'prop-types';
+import '../styles/common.css';
 
-import {useAttachEvent} from '../utils/useAttachEvent';
-import {ElementProps} from '../types';
-import {usePrevious} from '../utils/usePrevious';
-import {
-  extractAllowedOptionsUpdates,
-  UnknownOptions,
-} from '../utils/extractAllowedOptionsUpdates';
-import {useElementsOrCustomCheckoutSdkContextWithUseCase} from './CustomCheckout';
+const App = () => {
+  const [pk, setPK] = React.useState(
+    window.sessionStorage.getItem('react-stripe-js-pk') || ''
+  );
+  const [clientSecret, setClientSecret] = React.useState(
+    window.sessionStorage.getItem('react-stripe-js-embedded-client-secret') ||
+      ''
+  );
 
-type UnknownCallback = (...args: unknown[]) => any;
-
-interface PrivateElementProps {
-  id?: string;
-  className?: string;
-  onChange?: UnknownCallback;
-  onBlur?: UnknownCallback;
-  onFocus?: UnknownCallback;
-  onEscape?: UnknownCallback;
-  onReady?: UnknownCallback;
-  onClick?: UnknownCallback;
-  onLoadError?: UnknownCallback;
-  onLoaderStart?: UnknownCallback;
-  onNetworksChange?: UnknownCallback;
-  onConfirm?: UnknownCallback;
-  onCancel?: UnknownCallback;
-  onShippingAddressChange?: UnknownCallback;
-  onShippingRateChange?: UnknownCallback;
-  options?: UnknownOptions;
-}
-
-const capitalized = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
-
-const createElementComponent = (
-  type: stripeJs.StripeElementType,
-  isServer: boolean
-): FunctionComponent<ElementProps> => {
-  const displayName = `${capitalized(type)}Element`;
-
-  const ClientElement: FunctionComponent<PrivateElementProps> = ({
-    id,
-    className,
-    options = {},
-    onBlur,
-    onFocus,
-    onReady,
-    onChange,
-    onEscape,
-    onClick,
-    onLoadError,
-    onLoaderStart,
-    onNetworksChange,
-    onConfirm,
-    onCancel,
-    onShippingAddressChange,
-    onShippingRateChange,
-  }) => {
-    const ctx = useElementsOrCustomCheckoutSdkContextWithUseCase(
-      `mounts <${displayName}>`
+  React.useEffect(() => {
+    window.sessionStorage.setItem('react-stripe-js-pk', pk || '');
+  }, [pk]);
+  React.useEffect(() => {
+    window.sessionStorage.setItem(
+      'react-stripe-js-embedded-client-secret',
+      clientSecret || ''
     );
-    const elements = 'elements' in ctx ? ctx.elements : null;
-    const customCheckoutSdk =
-      'customCheckoutSdk' in ctx ? ctx.customCheckoutSdk : null;
-    const [element, setElement] = React.useState<stripeJs.StripeElement | null>(
-      null
-    );
-    const elementRef = React.useRef<stripeJs.StripeElement | null>(null);
-    const domNode = React.useRef<HTMLDivElement | null>(null);
+  }, [clientSecret]);
 
-    // For every event where the merchant provides a callback, call element.on
-    // with that callback. If the merchant ever changes the callback, removes
-    // the old callback with element.off and then call element.on with the new one.
-    useAttachEvent(element, 'blur', onBlur);
-    useAttachEvent(element, 'focus', onFocus);
-    useAttachEvent(element, 'escape', onEscape);
-    useAttachEvent(element, 'click', onClick);
-    useAttachEvent(element, 'loaderror', onLoadError);
-    useAttachEvent(element, 'loaderstart', onLoaderStart);
-    useAttachEvent(element, 'networkschange', onNetworksChange);
-    useAttachEvent(element, 'confirm', onConfirm);
-    useAttachEvent(element, 'cancel', onCancel);
-    useAttachEvent(element, 'shippingaddresschange', onShippingAddressChange);
-    useAttachEvent(element, 'shippingratechange', onShippingRateChange);
-    useAttachEvent(element, 'change', onChange);
+  const [stripePromise, setStripePromise] = React.useState();
 
-    let readyCallback: UnknownCallback | undefined;
-    if (onReady) {
-      if (type === 'expressCheckout') {
-        // Passes through the event, which includes visible PM types
-        readyCallback = onReady;
-      } else {
-        // For other Elements, pass through the Element itself.
-        readyCallback = () => {
-          onReady(element);
-        };
-      }
-    }
-
-    useAttachEvent(element, 'ready', readyCallback);
-
-    React.useLayoutEffect(() => {
-      if (
-        elementRef.current === null &&
-        domNode.current !== null &&
-        (elements || customCheckoutSdk)
-      ) {
-        let newElement: stripeJs.StripeElement | null = null;
-        if (customCheckoutSdk) {
-          newElement = customCheckoutSdk.createElement(type as any, options);
-        } else if (elements) {
-          newElement = elements.create(type as any, options);
-        }
-
-        // Store element in a ref to ensure it's _immediately_ available in cleanup hooks in StrictMode
-        elementRef.current = newElement;
-        // Store element in state to facilitate event listener attachment
-        setElement(newElement);
-
-        if (newElement) {
-          newElement.mount(domNode.current);
-        }
-      }
-    }, [elements, customCheckoutSdk, options]);
-
-    const prevOptions = usePrevious(options);
-    React.useEffect(() => {
-      if (!elementRef.current) {
-        return;
-      }
-
-      const updates = extractAllowedOptionsUpdates(options, prevOptions, [
-        'paymentRequest',
-      ]);
-
-      if (updates) {
-        elementRef.current.update(updates);
-      }
-    }, [options, prevOptions]);
-
-    React.useLayoutEffect(() => {
-      return () => {
-        if (
-          elementRef.current &&
-          typeof elementRef.current.destroy === 'function'
-        ) {
-          try {
-            elementRef.current.destroy();
-            elementRef.current = null;
-          } catch (error) {
-            // Do nothing
-          }
-        }
-      };
-    }, []);
-
-    return <div id={id} className={className} ref={domNode} />;
+  const handleSubmit = (e) => {
+    e.preventDefault();
   };
 
-  // Only render the Element wrapper in a server environment.
-  const ServerElement: FunctionComponent<PrivateElementProps> = (props) => {
-    useElementsOrCustomCheckoutSdkContextWithUseCase(`mounts <${displayName}>`);
-    const {id, className} = props;
-    return <div id={id} className={className} />;
+  const handleUnload = () => {
+    setStripePromise(null);
   };
 
-  const Element = isServer ? ServerElement : ClientElement;
-
-  Element.propTypes = {
-    id: PropTypes.string,
-    className: PropTypes.string,
-    onChange: PropTypes.func,
-    onBlur: PropTypes.func,
-    onFocus: PropTypes.func,
-    onReady: PropTypes.func,
-    onEscape: PropTypes.func,
-    onClick: PropTypes.func,
-    onLoadError: PropTypes.func,
-    onLoaderStart: PropTypes.func,
-    onNetworksChange: PropTypes.func,
-    onConfirm: PropTypes.func,
-    onCancel: PropTypes.func,
-    onShippingAddressChange: PropTypes.func,
-    onShippingRateChange: PropTypes.func,
-    options: PropTypes.object as any,
-  };
-
-  Element.displayName = displayName;
-  (Element as any).__elementType = type;
-
-  return Element as FunctionComponent<ElementProps>;
+  return (
+    <>
+      <form onSubmit={handleSubmit}>
+        <label>
+          CheckoutSession client_secret
+          <input
+            value={clientSecret}
+            onChange={(e) => setClientSecret(e.target.value)}
+          />
+        </label>
+        <label>
+          Publishable key{' '}
+          <input value={pk} onChange={(e) => setPK(e.target.value)} />
+        </label>
+        <button style={{marginRight: 10}} type="submit">
+          Load
+        </button>
+        <button type="button" onClick={handleUnload}>
+          Unload
+        </button>
+      </form>
+      {stripePromise && clientSecret && (
+        <EmbeddedCheckoutProvider
+          stripe={stripePromise}
+          options={{clientSecret}}
+        >
+          <EmbeddedCheckout />
+        </EmbeddedCheckoutProvider>
+      )}
+    </>
+  );
 };
 
-export default createElementComponent;
+export default App;

@@ -1,65 +1,74 @@
+// This example shows you how to set up React Stripe.js and use
+// Embedded Checkout.
+// Learn how to accept a payment using the official Stripe docs.
+// https://stripe.com/docs/payments/accept-a-payment#web
+
 import React from 'react';
-import {useEmbeddedCheckoutContext} from './EmbeddedCheckoutProvider';
-import {isServer} from '../utils/isServer';
+import {loadStripe} from '@stripe/stripe-js';
+import {EmbeddedCheckoutProvider, EmbeddedCheckout} from '../../src';
 
-interface EmbeddedCheckoutProps {
-  /**
-   * Passes through to the Embedded Checkout container.
-   */
-  id?: string;
+import '../styles/common.css';
 
-  /**
-   * Passes through to the Embedded Checkout container.
-   */
-  className?: string;
-}
+const App = () => {
+  const [pk, setPK] = React.useState(
+    window.sessionStorage.getItem('react-stripe-js-pk') || ''
+  );
+  const [clientSecret, setClientSecret] = React.useState(
+    window.sessionStorage.getItem('react-stripe-js-embedded-client-secret') ||
+      ''
+  );
 
-const EmbeddedCheckoutClientElement = ({
-  id,
-  className,
-}: EmbeddedCheckoutProps) => {
-  const {embeddedCheckout} = useEmbeddedCheckoutContext();
+  React.useEffect(() => {
+    window.sessionStorage.setItem('react-stripe-js-pk', pk || '');
+  }, [pk]);
+  React.useEffect(() => {
+    window.sessionStorage.setItem(
+      'react-stripe-js-embedded-client-secret',
+      clientSecret || ''
+    );
+  }, [clientSecret]);
 
-  const isMounted = React.useRef<boolean>(false);
-  const domNode = React.useRef<HTMLDivElement | null>(null);
+  const [stripePromise, setStripePromise] = React.useState();
 
-  React.useLayoutEffect(() => {
-    if (!isMounted.current && embeddedCheckout && domNode.current !== null) {
-      embeddedCheckout.mount(domNode.current);
-      isMounted.current = true;
-    }
+  const handleSubmit = (e) => {
+    e.preventDefault();
+  };
 
-    // Clean up on unmount
-    return () => {
-      if (isMounted.current && embeddedCheckout) {
-        try {
-          embeddedCheckout.unmount();
-          isMounted.current = false;
-        } catch (e) {
-          // Do nothing.
-          // Parent effects are destroyed before child effects, so
-          // in cases where both the EmbeddedCheckoutProvider and
-          // the EmbeddedCheckout component are removed at the same
-          // time, the embeddedCheckout instance will be destroyed,
-          // which causes an error when calling unmount.
-        }
-      }
-    };
-  }, [embeddedCheckout]);
+  const handleUnload = () => {
+    setStripePromise(null);
+  };
 
-  return <div ref={domNode} id={id} className={className} />;
+  return (
+    <>
+      <form onSubmit={handleSubmit}>
+        <label>
+          CheckoutSession client_secret
+          <input
+            value={clientSecret}
+            onChange={(e) => setClientSecret(e.target.value)}
+          />
+        </label>
+        <label>
+          Publishable key{' '}
+          <input value={pk} onChange={(e) => setPK(e.target.value)} />
+        </label>
+        <button style={{marginRight: 10}} type="submit">
+          Load
+        </button>
+        <button type="button" onClick={handleUnload}>
+          Unload
+        </button>
+      </form>
+      {stripePromise && clientSecret && (
+        <EmbeddedCheckoutProvider
+          stripe={stripePromise}
+          options={{clientSecret}}
+        >
+          <EmbeddedCheckout />
+        </EmbeddedCheckoutProvider>
+      )}
+    </>
+  );
 };
 
-// Only render the wrapper in a server environment.
-const EmbeddedCheckoutServerElement = ({
-  id,
-  className,
-}: EmbeddedCheckoutProps) => {
-  // Validate that we are in the right context by calling useEmbeddedCheckoutContext.
-  useEmbeddedCheckoutContext();
-  return <div id={id} className={className} />;
-};
-
-export const EmbeddedCheckout = isServer
-  ? EmbeddedCheckoutServerElement
-  : EmbeddedCheckoutClientElement;
+export default App;

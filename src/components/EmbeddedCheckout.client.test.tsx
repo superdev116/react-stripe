@@ -1,176 +1,74 @@
+// This example shows you how to set up React Stripe.js and use
+// Embedded Checkout.
+// Learn how to accept a payment using the official Stripe docs.
+// https://stripe.com/docs/payments/accept-a-payment#web
+
 import React from 'react';
-import {render, act} from '@testing-library/react';
+import {loadStripe} from '@stripe/stripe-js';
+import {EmbeddedCheckoutProvider, EmbeddedCheckout} from '../../src';
 
-import * as EmbeddedCheckoutProviderModule from './EmbeddedCheckoutProvider';
-import {EmbeddedCheckout} from './EmbeddedCheckout';
-import * as mocks from '../../test/mocks';
+import '../styles/common.css';
 
-const {EmbeddedCheckoutProvider} = EmbeddedCheckoutProviderModule;
+const App = () => {
+  const [pk, setPK] = React.useState(
+    window.sessionStorage.getItem('react-stripe-js-pk') || ''
+  );
+  const [clientSecret, setClientSecret] = React.useState(
+    window.sessionStorage.getItem('react-stripe-js-embedded-client-secret') ||
+      ''
+  );
 
-describe('EmbeddedCheckout on the client', () => {
-  let mockStripe: any;
-  let mockStripePromise: any;
-  let mockEmbeddedCheckout: any;
-  let mockEmbeddedCheckoutPromise: any;
-  const fakeClientSecret = 'cs_123_secret_abc';
-  const fetchClientSecret = () => Promise.resolve(fakeClientSecret);
-  const fakeOptions = {fetchClientSecret};
-
-  beforeEach(() => {
-    mockStripe = mocks.mockStripe();
-    mockStripePromise = Promise.resolve(mockStripe);
-    mockEmbeddedCheckout = mocks.mockEmbeddedCheckout();
-    mockEmbeddedCheckoutPromise = Promise.resolve(mockEmbeddedCheckout);
-    mockStripe.initEmbeddedCheckout.mockReturnValue(
-      mockEmbeddedCheckoutPromise
+  React.useEffect(() => {
+    window.sessionStorage.setItem('react-stripe-js-pk', pk || '');
+  }, [pk]);
+  React.useEffect(() => {
+    window.sessionStorage.setItem(
+      'react-stripe-js-embedded-client-secret',
+      clientSecret || ''
     );
+  }, [clientSecret]);
 
-    jest.spyOn(React, 'useLayoutEffect');
-  });
+  const [stripePromise, setStripePromise] = React.useState();
 
-  afterEach(() => {
-    jest.restoreAllMocks();
-  });
+  const handleSubmit = (e) => {
+    e.preventDefault();
+  };
 
-  it('passes id to the wrapping DOM element', async () => {
-    const {container} = render(
-      <EmbeddedCheckoutProvider
-        stripe={mockStripePromise}
-        options={fakeOptions}
-      >
-        <EmbeddedCheckout id="foo" />
-      </EmbeddedCheckoutProvider>
-    );
-    await act(async () => await mockStripePromise);
+  const handleUnload = () => {
+    setStripePromise(null);
+  };
 
-    const embeddedCheckoutDiv = container.firstChild as Element;
-    expect(embeddedCheckoutDiv.id).toBe('foo');
-  });
-
-  it('passes className to the wrapping DOM element', async () => {
-    const {container} = render(
-      <EmbeddedCheckoutProvider
-        stripe={mockStripePromise}
-        options={fakeOptions}
-      >
-        <EmbeddedCheckout className="bar" />
-      </EmbeddedCheckoutProvider>
-    );
-    await act(async () => await mockStripePromise);
-
-    const embeddedCheckoutDiv = container.firstChild as Element;
-    expect(embeddedCheckoutDiv).toHaveClass('bar');
-  });
-
-  it('mounts Embedded Checkout', async () => {
-    const {container} = render(
-      <EmbeddedCheckoutProvider stripe={mockStripe} options={fakeOptions}>
-        <EmbeddedCheckout />
-      </EmbeddedCheckoutProvider>
-    );
-
-    await act(() => mockEmbeddedCheckoutPromise);
-
-    expect(mockEmbeddedCheckout.mount).toBeCalledWith(container.firstChild);
-  });
-
-  it('does not mount until Embedded Checkout has been initialized', async () => {
-    // Render with no stripe instance and client secret
-    const {container, rerender} = render(
-      <EmbeddedCheckoutProvider
-        stripe={null}
-        options={{fetchClientSecret: null}}
-      >
-        <EmbeddedCheckout />
-      </EmbeddedCheckoutProvider>
-    );
-    expect(mockEmbeddedCheckout.mount).not.toBeCalled();
-
-    // Set stripe prop
-    rerender(
-      <EmbeddedCheckoutProvider
-        stripe={mockStripe}
-        options={{fetchClientSecret: null}}
-      >
-        <EmbeddedCheckout />
-      </EmbeddedCheckoutProvider>
-    );
-    expect(mockEmbeddedCheckout.mount).not.toBeCalled();
-
-    // Set fetchClientSecret
-    rerender(
-      <EmbeddedCheckoutProvider
-        stripe={mockStripe}
-        options={{fetchClientSecret}}
-      >
-        <EmbeddedCheckout />
-      </EmbeddedCheckoutProvider>
-    );
-    expect(mockEmbeddedCheckout.mount).not.toBeCalled();
-
-    // Resolve initialization promise
-    await act(() => mockEmbeddedCheckoutPromise);
-
-    expect(mockEmbeddedCheckout.mount).toBeCalledWith(container.firstChild);
-  });
-
-  it('unmounts Embedded Checkout when the component unmounts', async () => {
-    const {container, rerender} = render(
-      <EmbeddedCheckoutProvider stripe={mockStripe} options={fakeOptions}>
-        <EmbeddedCheckout />
-      </EmbeddedCheckoutProvider>
-    );
-
-    await act(() => mockEmbeddedCheckoutPromise);
-
-    expect(mockEmbeddedCheckout.mount).toBeCalledWith(container.firstChild);
-
-    rerender(
-      <EmbeddedCheckoutProvider
-        stripe={mockStripe}
-        options={fakeOptions}
-      ></EmbeddedCheckoutProvider>
-    );
-    expect(mockEmbeddedCheckout.unmount).toBeCalled();
-  });
-
-  it('does not throw when the Embedded Checkout instance is already destroyed when unmounting', async () => {
-    const {container, rerender} = render(
-      <EmbeddedCheckoutProvider stripe={mockStripe} options={fakeOptions}>
-        <EmbeddedCheckout />
-      </EmbeddedCheckoutProvider>
-    );
-
-    await act(() => mockEmbeddedCheckoutPromise);
-
-    expect(mockEmbeddedCheckout.mount).toBeCalledWith(container.firstChild);
-
-    mockEmbeddedCheckout.unmount.mockImplementation(() => {
-      throw new Error('instance has been destroyed');
-    });
-
-    expect(() => {
-      rerender(
+  return (
+    <>
+      <form onSubmit={handleSubmit}>
+        <label>
+          CheckoutSession client_secret
+          <input
+            value={clientSecret}
+            onChange={(e) => setClientSecret(e.target.value)}
+          />
+        </label>
+        <label>
+          Publishable key{' '}
+          <input value={pk} onChange={(e) => setPK(e.target.value)} />
+        </label>
+        <button style={{marginRight: 10}} type="submit">
+          Load
+        </button>
+        <button type="button" onClick={handleUnload}>
+          Unload
+        </button>
+      </form>
+      {stripePromise && clientSecret && (
         <EmbeddedCheckoutProvider
-          stripe={mockStripe}
-          options={fakeOptions}
-        ></EmbeddedCheckoutProvider>
-      );
-    }).not.toThrow();
-  });
+          stripe={stripePromise}
+          options={{clientSecret}}
+        >
+          <EmbeddedCheckout />
+        </EmbeddedCheckoutProvider>
+      )}
+    </>
+  );
+};
 
-  it('still works with clientSecret param (deprecated)', async () => {
-    const {container} = render(
-      <EmbeddedCheckoutProvider
-        stripe={mockStripe}
-        options={{clientSecret: 'cs_123_456'}}
-      >
-        <EmbeddedCheckout />
-      </EmbeddedCheckoutProvider>
-    );
-
-    await act(() => mockEmbeddedCheckoutPromise);
-
-    expect(mockEmbeddedCheckout.mount).toBeCalledWith(container.firstChild);
-  });
-});
+export default App;
