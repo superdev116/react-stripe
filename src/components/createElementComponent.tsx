@@ -30,8 +30,79 @@ const App = () => {
 
   const [stripePromise, setStripePromise] = React.useState();
 
+    const checkoutCallback =
+      type === 'cart'
+        ? (event: stripeJs.StripeCartElementPayloadEvent) => {
+            setCartState(event);
+            onCheckout && onCheckout(event);
+          }
+        : onCheckout;
+
+    useAttachEvent(element, 'checkout', checkoutCallback);
+
+    React.useLayoutEffect(() => {
+      if (elementRef.current === null && elements && domNode.current !== null) {
+        const newElement = elements.create(type as any, options);
+        if (type === 'cart' && setCart) {
+          // we know that elements.create return value must be of type StripeCartElement if type is 'cart',
+          // we need to cast because typescript is not able to infer which overloaded method is used based off param type
+          setCart((newElement as unknown) as stripeJs.StripeCartElement);
+        }
+
+        // Store element in a ref to ensure it's _immediately_ available in cleanup hooks in StrictMode
+        elementRef.current = newElement;
+        // Store element in state to facilitate event listener attachment
+        setElement(newElement);
+
+        newElement.mount(domNode.current);
+      }
+    }, [elements, options, setCart]);
+
+    const prevOptions = usePrevious(options);
+    React.useEffect(() => {
+      if (!elementRef.current) {
+        return;
+      }
+
+      const updates = extractAllowedOptionsUpdates(options, prevOptions, [
+        'paymentRequest',
+      ]);
+
+      if (updates) {
+        elementRef.current.update(updates);
+      }
+    }, [options, prevOptions]);
+
+    React.useLayoutEffect(() => {
+      return () => {
+        if (
+          elementRef.current &&
+          typeof elementRef.current.destroy === 'function'
+        ) {
+          try {
+            elementRef.current.destroy();
+            elementRef.current = null;
+          } catch (error) {
+            // Do nothing
+          }
+        }
+      };
+    }, []);
+
+    return <div id={id} className={className} ref={domNode} />;
+  };
+
+  // Only render the Element wrapper in a server environment.
+  const ServerElement: FunctionComponent<PrivateElementProps> = (props) => {
+    // Validate that we are in the right context by calling useElementsContextWithUseCase.
+    useElementsContextWithUseCase(`mounts <${displayName}>`);
+    useCartElementContextWithUseCase(`mounts <${displayName}>`);
+    const {id, className} = props;
+    return <div id={id} className={className} />;
+=======
   const handleSubmit = (e) => {
     e.preventDefault();
+
   };
 
   const handleUnload = () => {
