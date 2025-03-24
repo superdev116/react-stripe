@@ -79,6 +79,13 @@ verify_commit_is_signed() {
   fi
 }
 
+check_github_token() {
+  if [[ -z "${GITHUB_TOKEN}" ]]; then
+    echo "GITHUB_TOKEN is not set."
+    exit 1
+  fi
+}
+
 # Show help if no arguments passed
 if [ $# -eq 0 ]; then
   echo "Error! Missing release type argument"
@@ -114,6 +121,8 @@ if [ -n "$PREID" ]; then
 
 fi
 
+check_github_token
+
 # Make sure our working dir is the repo root directory
 cd "$(git rev-parse --show-toplevel)"
 
@@ -140,6 +149,9 @@ fi
 echo "Installing dependencies according to lockfile"
 yarn -s install --frozen-lockfile
 
+echo "Building"
+yarn -s run build
+
 echo "Running tests"
 yarn -s run test
 
@@ -157,9 +169,6 @@ verify_commit_is_signed
 
 echo "Pushing git commit and tag"
 git push --follow-tags
-
-echo "Building"
-yarn -s run build
 
 echo "Publishing release"
 yarn --ignore-scripts publish --non-interactive --access=public

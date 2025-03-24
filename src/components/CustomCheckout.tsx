@@ -38,8 +38,13 @@ export const parseCustomCheckoutSdkContext = (
   return ctx;
 };
 
+type StripeCustomCheckoutActions = Omit<
+  Omit<stripeJs.StripeCustomCheckout, 'session'>,
+  'on'
+>;
+
 interface CustomCheckoutContextValue
-  extends stripeJs.StripeCustomCheckoutActions,
+  extends StripeCustomCheckoutActions,
     stripeJs.StripeCustomCheckoutSession {}
 const CustomCheckoutContext = React.createContext<CustomCheckoutContextValue | null>(
   null
@@ -254,8 +259,14 @@ export const useElementsOrCustomCheckoutSdkContextWithUseCase = (
   return parseElementsContext(elementsContext, useCaseString);
 };
 
-export const useCustomCheckout = (): CustomCheckoutContextValue | null => {
+export const useCustomCheckout = (): CustomCheckoutContextValue => {
   // ensure it's in CustomCheckoutProvider
   useCustomCheckoutSdkContextWithUseCase('calls useCustomCheckout()');
-  return React.useContext(CustomCheckoutContext);
+  const ctx = React.useContext(CustomCheckoutContext);
+  if (!ctx) {
+    throw new Error(
+      'Could not find CustomCheckout Context; You need to wrap the part of your app that calls useCustomCheckout() in an <CustomCheckoutProvider> provider.'
+    );
+  }
+  return ctx;
 };

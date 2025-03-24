@@ -32,7 +32,6 @@ const App = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setStripePromise(loadStripe(pk, {betas: ['embedded_checkout_beta_1']}));
   };
 
   const handleUnload = () => {
