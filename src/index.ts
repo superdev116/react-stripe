@@ -1,208 +1,74 @@
-import createElementComponent from './components/createElementComponent';
-import {
-  AuBankAccountElementComponent,
-  CardElementComponent,
-  CardNumberElementComponent,
-  CardExpiryElementComponent,
-  CardCvcElementComponent,
-  ExpressCheckoutElementComponent,
-  FpxBankElementComponent,
-  IbanElementComponent,
-  IdealBankElementComponent,
-  P24BankElementComponent,
-  EpsBankElementComponent,
-  LinkAuthenticationElementComponent,
-  PaymentElementComponent,
-  PaymentRequestButtonElementComponent,
-  ShippingAddressElementComponent,
-  AddressElementComponent,
-  CartElementComponent,
-  AffirmMessageElementComponent,
-  AfterpayClearpayMessageElementComponent,
-  PaymentMethodMessagingElementComponent,
-} from './types';
+// This example shows you how to set up React Stripe.js and use
+// Embedded Checkout.
+// Learn how to accept a payment using the official Stripe docs.
+// https://stripe.com/docs/payments/accept-a-payment#web
 
-export * from './types';
+import React from 'react';
+import {loadStripe} from '@stripe/stripe-js';
+import {EmbeddedCheckoutProvider, EmbeddedCheckout} from '../../src';
 
-export {
-  useElements,
-  useStripe,
-  useCartElement,
-  useCartElementState,
-  Elements,
-  ElementsConsumer,
-} from './components/Elements';
+import '../styles/common.css';
 
-const isServer = typeof window === 'undefined';
+const App = () => {
+  const [pk, setPK] = React.useState(
+    window.sessionStorage.getItem('react-stripe-js-pk') || ''
+  );
+  const [clientSecret, setClientSecret] = React.useState(
+    window.sessionStorage.getItem('react-stripe-js-embedded-client-secret') ||
+      ''
+  );
 
-/**
- * Requires beta access:
- * Contact [Stripe support](https://support.stripe.com/) for more information.
- *
- * @docs https://stripe.com/docs/stripe-js/react#element-components
- */
-export const AuBankAccountElement: AuBankAccountElementComponent = createElementComponent(
-  'auBankAccount',
-  isServer
-);
+  React.useEffect(() => {
+    window.sessionStorage.setItem('react-stripe-js-pk', pk || '');
+  }, [pk]);
+  React.useEffect(() => {
+    window.sessionStorage.setItem(
+      'react-stripe-js-embedded-client-secret',
+      clientSecret || ''
+    );
+  }, [clientSecret]);
 
-/**
- * @docs https://stripe.com/docs/stripe-js/react#element-components
- */
-export const CardElement: CardElementComponent = createElementComponent(
-  'card',
-  isServer
-);
+  const [stripePromise, setStripePromise] = React.useState();
 
-/**
- * @docs https://stripe.com/docs/stripe-js/react#element-components
- */
-export const CardNumberElement: CardNumberElementComponent = createElementComponent(
-  'cardNumber',
-  isServer
-);
+  const handleSubmit = (e) => {
+    e.preventDefault();
+  };
 
-/**
- * @docs https://stripe.com/docs/stripe-js/react#element-components
- */
-export const CardExpiryElement: CardExpiryElementComponent = createElementComponent(
-  'cardExpiry',
-  isServer
-);
+  const handleUnload = () => {
+    setStripePromise(null);
+  };
 
-/**
- * @docs https://stripe.com/docs/stripe-js/react#element-components
- */
-export const CardCvcElement: CardCvcElementComponent = createElementComponent(
-  'cardCvc',
-  isServer
-);
+  return (
+    <>
+      <form onSubmit={handleSubmit}>
+        <label>
+          CheckoutSession client_secret
+          <input
+            value={clientSecret}
+            onChange={(e) => setClientSecret(e.target.value)}
+          />
+        </label>
+        <label>
+          Publishable key{' '}
+          <input value={pk} onChange={(e) => setPK(e.target.value)} />
+        </label>
+        <button style={{marginRight: 10}} type="submit">
+          Load
+        </button>
+        <button type="button" onClick={handleUnload}>
+          Unload
+        </button>
+      </form>
+      {stripePromise && clientSecret && (
+        <EmbeddedCheckoutProvider
+          stripe={stripePromise}
+          options={{clientSecret}}
+        >
+          <EmbeddedCheckout />
+        </EmbeddedCheckoutProvider>
+      )}
+    </>
+  );
+};
 
-/**
- * @docs https://stripe.com/docs/stripe-js/react#element-components
- */
-export const FpxBankElement: FpxBankElementComponent = createElementComponent(
-  'fpxBank',
-  isServer
-);
-
-/**
- * @docs https://stripe.com/docs/stripe-js/react#element-components
- */
-export const IbanElement: IbanElementComponent = createElementComponent(
-  'iban',
-  isServer
-);
-
-/**
- * @docs https://stripe.com/docs/stripe-js/react#element-components
- */
-export const IdealBankElement: IdealBankElementComponent = createElementComponent(
-  'idealBank',
-  isServer
-);
-
-/**
- * @docs https://stripe.com/docs/stripe-js/react#element-components
- */
-export const P24BankElement: P24BankElementComponent = createElementComponent(
-  'p24Bank',
-  isServer
-);
-
-/**
- * @docs https://stripe.com/docs/stripe-js/react#element-components
- */
-export const EpsBankElement: EpsBankElementComponent = createElementComponent(
-  'epsBank',
-  isServer
-);
-
-export const PaymentElement: PaymentElementComponent = createElementComponent(
-  'payment',
-  isServer
-);
-
-/**
- * Requires beta access:
- * Contact [Stripe support](https://support.stripe.com/) for more information.
- *
- * @docs https://stripe.com/docs/stripe-js/react#element-components
- */
-export const ExpressCheckoutElement: ExpressCheckoutElementComponent = createElementComponent(
-  'expressCheckout',
-  isServer
-);
-
-/**
- * @docs https://stripe.com/docs/stripe-js/react#element-components
- */
-export const PaymentRequestButtonElement: PaymentRequestButtonElementComponent = createElementComponent(
-  'paymentRequestButton',
-  isServer
-);
-
-/**
- * Requires beta access:
- * Contact [Stripe support](https://support.stripe.com/) for more information.
- *
- * @docs https://stripe.com/docs/stripe-js/react#element-components
- */
-export const LinkAuthenticationElement: LinkAuthenticationElementComponent = createElementComponent(
-  'linkAuthentication',
-  isServer
-);
-
-/**
- * @docs https://stripe.com/docs/stripe-js/react#element-components
- */
-export const AddressElement: AddressElementComponent = createElementComponent(
-  'address',
-  isServer
-);
-
-/**
- * @deprecated
- * Use `AddressElement` instead.
- *
- * @docs https://stripe.com/docs/stripe-js/react#element-components
- */
-export const ShippingAddressElement: ShippingAddressElementComponent = createElementComponent(
-  'shippingAddress',
-  isServer
-);
-
-/**
- * Requires beta access:
- * Contact [Stripe support](https://support.stripe.com/) for more information.
- *
- * @docs https://stripe.com/docs/elements/cart-element
- */
-export const CartElement: CartElementComponent = createElementComponent(
-  'cart',
-  isServer
-);
-
-/**
- * @docs https://stripe.com/docs/stripe-js/react#element-components
- */
-export const PaymentMethodMessagingElement: PaymentMethodMessagingElementComponent = createElementComponent(
-  'paymentMethodMessaging',
-  isServer
-);
-
-/**
- * @docs https://stripe.com/docs/stripe-js/react#element-components
- */
-export const AffirmMessageElement: AffirmMessageElementComponent = createElementComponent(
-  'affirmMessage',
-  isServer
-);
-
-/**
- * @docs https://stripe.com/docs/stripe-js/react#element-components
- */
-export const AfterpayClearpayMessageElement: AfterpayClearpayMessageElementComponent = createElementComponent(
-  'afterpayClearpayMessage',
-  isServer
-);
+export default App;
