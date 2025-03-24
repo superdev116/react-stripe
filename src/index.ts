@@ -16,7 +16,6 @@ import {
   PaymentRequestButtonElementComponent,
   ShippingAddressElementComponent,
   AddressElementComponent,
-  CartElementComponent,
   AffirmMessageElementComponent,
   AfterpayClearpayMessageElementComponent,
   PaymentMethodMessagingElementComponent,
@@ -154,6 +153,17 @@ export const LinkAuthenticationElement: LinkAuthenticationElementComponent = cre
 );
 
 /**
+ * @docs https://stripe.com/docs/stripe-js/react#element-components
+ */
+export const AddressElement: AddressElementComponent = createElementComponent(
+  'address',
+  isServer
+);
+
+/**
+ * @deprecated
+ * Use `AddressElement` instead.
+ *
  * @docs https://stripe.com/docs/stripe-js/react#element-components
  */
 export const AddressElement: AddressElementComponent = createElementComponent(
